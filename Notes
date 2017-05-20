@@ -1,0 +1,2 @@
+g++ -w ClienteMensajero.cpp -o climen.out -std=c++11 -lboost_system -lpthread
+g++ -w ClienteMensajero.cpp -o climen.out -std=c++11 -lboost_system -lpthread
