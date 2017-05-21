@@ -34,6 +34,10 @@ int main(int argc,char * argv[]){
 
 
             boost::asio::connect(socket,endpoints); //Conectamos nuestro socket al primer endpoint posible
+            msg.append(name);
+            msg.append("se ha conectado al servidor.");
+            boost::system::error_code ignored_error;
+            boost::asio::write(socket, boost::asio::buffer(msg),ignored_error); //Enviamos el mensaje por el socket
 
         do {
             std::cout<<"Ingrese el mensaje a enviar: "<<std::endl;

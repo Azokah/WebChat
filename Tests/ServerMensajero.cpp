@@ -18,11 +18,11 @@ int main()
         //Connection Listener, initialized on port 8000 and IPv4
         tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), 9001));
         
-        std::cout<<"Escuchando..."<<std::endl;
+        std::cout<<"Esperando clientes..."<<std::endl;
         while(true){
             tcp::socket socket(io_service); 
             acceptor.accept(socket);
-            std::cout<<"Conectado.."<<std::endl;
+
             boost::system::error_code error;
             while(true){
                 size_t tam = socket.read_some(boost::asio::buffer(msg), error);
