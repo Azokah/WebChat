@@ -9,8 +9,6 @@
 #include <cstring>
 #include <boost/asio.hpp> //TCP-IP Handling
 #include <boost/array.hpp> //Boost::array
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
 
 using boost::asio::ip::tcp;
 
@@ -23,10 +21,6 @@ class ClienteChat {
         void start();
         void chat();
 
-        void conexionHandler(const boost::system::error_code& ec, tcp::resolver::iterator i);
-        void handlerResolver(const boost::system::error_code& ec,tcp::resolver::iterator i);
-        
-
     private:
         std::string ip, name, msg, quit;
 
@@ -36,11 +30,6 @@ class ClienteChat {
         tcp::resolver::query * listaendpoints;
         tcp::resolver::iterator * endpoints;
 
-        
-        /*void handlerResolver(const boost::system::error_code& ec,
-        tcp::resolver::iterator i);*/
-
-        
 };
 
 #endif /* CLIENTECHATH*/

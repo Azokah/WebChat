@@ -1,0 +1,2 @@
+g++ mainServer.cpp -o serverChat.out -std=c++11 -lsfml-system -lsfml-network
+g++ mainCliente.cpp -o clienteChat.out -std=c++11 -lsfml-system -lsfml-network
