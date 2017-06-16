@@ -15,18 +15,28 @@ ClienteChat::ClienteChat(){
     quit.insert(0,name);
 };*/
 
+void ClienteChat::conexionHandler(const boost::system::error_code& ec, tcp::resolver::iterator i){};
 
+void ClienteChat::handlerResolver(const boost::system::error_code& ec,tcp::resolver::iterator i){
+    if (!ec){
+        boost::asio::async_connect(*socket, i, boost::bind(&ClienteChat::conexionHandler,
+                                                this,_1,
+                                                _2));
+    }
+}
+
+
+//boost::bind(&BoostTCPConnection::handleReceiveMessage, shared_from_this()
+//,boost::asio::placeholders::error, message)
 void ClienteChat::start(){
     try {
         resolver = new tcp::resolver(io_service); //el resolver se encarga de transformar los strings en ips y puertos
         socket = new tcp::socket(io_service);
     
-
         listaendpoints = new tcp::resolver::query (ip, "9001"); //se arma una lista con los posibles endpoints de esa ip en ese puerto
-
-        endpoints = new tcp::resolver::iterator(resolver->resolve(*listaendpoints)); //Iteramos por la lista par aconseguir una ip y puerto al q podamos conectarnos
-
-        boost::asio::connect(*socket,*endpoints); //Conectamos nuestro socket al primer endpoint posible
+        //endpoints = new tcp::resolver::iterator(); //Iteramos por la lista par aconseguir una ip y puerto al q podamos conectarnos
+        resolver->async_resolve(*listaendpoints,boost::bind(&ClienteChat::handlerResolver,this,_1,_2));//,boost::bind(&ClienteChat::handlerResolver, this));
+        //boost::asio::connect(*socket,*endpoints); //Conectamos nuestro socket al primer endpoint posible
         msg.append(name);
         msg.append("se ha conectado al servidor.");
         boost::system::error_code ignored_error;
@@ -49,3 +59,4 @@ void ClienteChat::chat(){
         } while(strcmp(quit.c_str(),msg.c_str()) != 0);//Si el usuario ingresa 'quit' se cierra el cliente
         socket->close();
 }
+
