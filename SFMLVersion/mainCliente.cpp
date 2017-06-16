@@ -7,7 +7,7 @@
 #define PUERTO 53000
 
 void mandarData(sf::TcpSocket * socket,std::string * mensaje){
-    const char * data;
+    const char * data = "";
     data = mensaje->c_str();
     if (socket->send(data, mensaje->size()) != sf::Socket::Done)
     {
@@ -15,7 +15,7 @@ void mandarData(sf::TcpSocket * socket,std::string * mensaje){
     }
 };
 void recibirData(sf::TcpSocket * socket){
-    char data[DATA_SIZE];
+    char data[DATA_SIZE] = {0};
     std::size_t bytesRecibidos;
 
     if (socket->receive(data, DATA_SIZE, bytesRecibidos) != sf::Socket::Done)

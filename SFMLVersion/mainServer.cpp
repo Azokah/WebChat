@@ -7,7 +7,7 @@
 #define PUERTO 53000
 
 void mandarData(sf::TcpSocket * socket,std::string * mensaje){
-    const char * data;
+    const char * data = "";
     data = mensaje->c_str();
     if (socket->send(data, mensaje->size()) != sf::Socket::Done)
     {
@@ -15,15 +15,17 @@ void mandarData(sf::TcpSocket * socket,std::string * mensaje){
     }
 };
 
-void retransmitir(sf::TcpSocket * socket,char * data){
-    if (socket->send(data,DATA_SIZE) != sf::Socket::Done)
-    {
-       std::cout<<"Error enviando data.."<<std::endl;
+void retransmitir(std::vector<sf::TcpSocket *> * socket,char * data,std::size_t bytes){
+    for(int i = 0; i < socket->size(); i++){
+        if (socket->at(i)->send(data,bytes) != sf::Socket::Done)
+        {
+        std::cout<<"Error enviando data.."<<std::endl;
+        }
     }
 };
 
-void recibirData(sf::TcpSocket * socket){
-    char data[DATA_SIZE];
+void recibirData(sf::TcpSocket * socket, std::vector<sf::TcpSocket*> * sockets){
+    char data[DATA_SIZE] = {0};
     std::size_t bytesRecibidos;
 
     if (socket->receive(data, DATA_SIZE, bytesRecibidos) != sf::Socket::Done)
@@ -31,11 +33,23 @@ void recibirData(sf::TcpSocket * socket){
        std::cout<<"Error recibiendo data.."<<std::endl;
     }
     std::cout<<data<<" - "<<"recibido en "<<bytesRecibidos<<" bytes."<<std::endl;
-    retransmitir(socket,data);
+    retransmitir(sockets,data,bytesRecibidos);
 };
 
-void aceptarConexiones(sf::TcpListener * listener, std::vector<sf::TcpSocket*> * clientes,sf::SocketSelector * socketSelector){
-    sf::TcpSocket * socket;
+void aceptarConexiones(sf::TcpListener * listener,sf::SocketSelector * listenerSelector, std::vector<sf::TcpSocket*> * clientes,sf::SocketSelector * socketSelector){
+    sf::TcpSocket * socket = new sf::TcpSocket();
+    socket->setBlocking(false);
+    if (listener->accept(*socket) != sf::Socket::Done){
+            //std::cout<<"Error aceptando conexiones.."<<std::endl;
+    }else{
+            clientes->push_back(socket);
+            socketSelector->add(*socket);
+    }
+
+
+};
+void aceptarConexionPrimera(sf::TcpListener * listener, std::vector<sf::TcpSocket*> * clientes,sf::SocketSelector * socketSelector){
+    sf::TcpSocket * socket = new sf::TcpSocket();
 
     if (listener->listen(PUERTO) != sf::Socket::Done){
         std::cout<<"Error escuchando conexiones.."<<std::endl;
@@ -46,6 +60,7 @@ void aceptarConexiones(sf::TcpListener * listener, std::vector<sf::TcpSocket*> *
         }else{
             clientes->push_back(socket);
             socketSelector->add(*socket);
+            listener->setBlocking(false);
         }
     }
 }
@@ -59,36 +74,24 @@ int main(int argc, char *argv[])
     unsigned short puerto = PUERTO;
     sf::SocketSelector socketSelector;
     sf::SocketSelector listenerSelector;
-    
+    listenerSelector.add(listener);
 
-    // bindear el listener con un puerto para escuchar conexiones
-    
+    aceptarConexionPrimera(&listener,&clientes,&socketSelector);
+
     while(true){
         if(socketSelector.wait(sf::seconds(2))){
             for(int i = 0; i < clientes.size(); i++){
                 if(socketSelector.isReady(*clientes.at(i))){
-                    recibirData(clientes.at(i));
+                    recibirData(clientes.at(i),&clientes);
                 }
             }
         }
         else
         {
-            std::cout<<"No se recibio nada..."<<std::endl;
-            aceptarConexiones(&listener,&clientes,&socketSelector);
+            //std::cout<<"No se recibio nada..."<<std::endl;
+            aceptarConexiones(&listener,&listenerSelector,&clientes,&socketSelector);
         }
     }
-    /*
-    if (socketSelector.wait(sf::seconds(2))){
-        for(sf::TcpSocket socket : clientes){ //Aca necesito hacer un vector de sockets
-            if (socketSelector.isReady(socket)){
-                // this socket is ready, you can receive (or accept if it's a listener)
-                recibirData(&socket);
-            }
-        }
-    }else{
-
-    }
-    */
 
     return 0;
 }
