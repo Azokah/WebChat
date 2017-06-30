@@ -1,2 +1,8 @@
 g++ mainServer.cpp -o serverChat.out -std=c++11 -lsfml-system -lsfml-network
 g++ mainCliente.cpp -o clienteChat.out -std=c++11 -lsfml-system -lsfml-network
+
+
+
+Chat Cliente - Servidor
+    Estado: Terminado
+        (Sin threading para input, no implementee ventanas, entonces se traba al input)

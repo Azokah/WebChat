@@ -1,2 +1,7 @@
 g++ mainServer.cpp -o serverChat.out -std=c++11 -lsfml-system -lsfml-network
 g++ mainCliente.cpp -o clienteChat.out -std=c++11 -lsfml-system -lsfml-network
+
+
+
+Chat distribuido:
+    Falta terminar: Cliente mensajee usuarios que recibe de servidor de lookback
