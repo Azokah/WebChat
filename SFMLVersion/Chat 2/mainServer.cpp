@@ -25,16 +25,19 @@ void retransmitir(std::vector<sf::TcpSocket *> * socket,char * data,std::size_t 
 };
 
 void notificarUsuarios(std::vector<sf::TcpSocket *> * socket){
-    std::vector<const char *> data;
-    for(int i = 0; i < socket->size(); i++){
-        data.push_back(socket->at(i)->getRemoteAddress().toString().c_str());
-        std::cout<<"Cargando vector de direcciones de clientes..."<<std::endl;
-    }
-    for(int j = 0; j < data.size(); j++){
+    for(int j = 0; j < socket->size(); j++){
         for(int i = 0; i < socket->size(); i++){
-            if (socket->at(i)->send(data.at(j),sizeof(data.at(j))) != sf::Socket::Done){
-                std::cout<<"Error enviando data.."<<std::endl;
+            const char * data = socket->at(i)->getRemoteAddress().toString().c_str();
+            std::size_t bytes = strlen(data);
+            //std::size_t bytesEnviados;
+            if(bytes <= 15){
+                if (socket->at(j)->send(data,bytes) != sf::Socket::Done){
+                    std::cout<<"Error enviando data.."<<std::endl;
+                }else{
+                   std::cout<<"Enviada Direccion "<<i<<": "<<data<<" en "<<bytes<<" bytes."<<std::endl;
+                }
             }
+            data = "";
         }
     }
 };
