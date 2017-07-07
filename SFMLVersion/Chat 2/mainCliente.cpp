@@ -13,19 +13,108 @@ Legajo: 90892*/
 
 //PEDAZO DE CODIGO DE SERVER QUE NO SABIA DONDE METER 
 //En realidad no sabia como declarar el prototipo de un struct
-struct Server{
-    std::vector<sf::TcpSocket*> clientes;
-    sf::TcpSocket cliente;
-    sf::IpAddress ip = sf::IpAddress::getLocalAddress();
-    sf::TcpListener listener;
-    unsigned short puerto = PUERTO_CHAT;
-    sf::SocketSelector socketSelector;
-    sf::SocketSelector listenerSelector;
-    //La primera conexion es bloqueante                                                            //El resto no.
+class Server{
+    public:
+        Server();
+        ~Server();
+
+        void aceptarConexionPrimera();
+        void loopServer();
+        void aceptarConexiones();
+        void retransmitir(std::vector<sf::TcpSocket *> * socket,char * data,std::size_t bytes);
+        void recibirData(sf::TcpSocket * socket, std::vector<sf::TcpSocket*> * sockets);
+    //private:
+        std::vector<sf::TcpSocket*> clientes;
+        sf::TcpSocket cliente;
+        sf::IpAddress ip;
+        sf::TcpListener listener;
+        unsigned short puerto;
+        sf::SocketSelector socketSelector;
+        sf::SocketSelector listenerSelector;
+        //La primera conexion es bloqueante                                                            //El resto no.
 };
 
-void initServer(struct Server * server);
-void loopServer(struct Server * server);
+Server::Server(){
+    puerto = PUERTO_CHAT;
+    ip = sf::IpAddress::getLocalAddress();
+    std::cout<<"Local Adress: "<<sf::IpAddress::getLocalAddress()<<std::endl;
+
+    listenerSelector.add(listener);
+
+    aceptarConexionPrimera();
+
+}
+//LLamo auto server a cada cliente que abre una instancia de servidor, para que pueda recibir mensajes
+//de otros clientes. Cada cliente envia cadenas a otros servidores, los servidores los reciben y muestran
+//De esta forma, un cliente enrealidad es una mezcla entre "cliente y servidor"
+
+
+void Server::retransmitir(std::vector<sf::TcpSocket *> * socket,char * data,std::size_t bytes){
+    for(int i = 0; i < socket->size(); i++){
+        if (socket->at(i)->send(data,bytes) != sf::Socket::Done)
+        {
+        std::cout<<"Error enviando data.."<<std::endl;
+        }
+    }
+};
+
+void Server::recibirData(sf::TcpSocket * socket, std::vector<sf::TcpSocket*> * sockets){
+    char data[DATA_SIZE] = {0};
+    std::size_t bytesRecibidos;
+
+    if (socket->receive(data, DATA_SIZE, bytesRecibidos) != sf::Socket::Done)
+    {
+       std::cout<<"Error recibiendo data.."<<std::endl;
+    }
+    std::cout<<data<<std::endl;//" - "<<"recibido en "<<bytesRecibidos<<" bytes."<<std::endl;
+    //retransmitir(sockets,data,bytesRecibidos);
+};
+
+void Server::aceptarConexiones(){
+    sf::TcpSocket * socket = new sf::TcpSocket();
+    socket->setBlocking(false);
+    if (listener.accept(*socket) != sf::Socket::Done){
+            //std::cout<<"Error aceptando conexiones.."<<std::endl;
+    }else{
+            clientes.push_back(socket);
+            socketSelector.add(*socket);
+    }
+
+
+};
+void Server::aceptarConexionPrimera(){
+    sf::TcpSocket * socket = new sf::TcpSocket();
+
+    if (listener.listen(PUERTO_CHAT) != sf::Socket::Done){
+        std::cout<<"Error escuchando conexiones.."<<std::endl;
+    }else{
+        //Aceptando clientes
+        if (listener.accept(*socket) != sf::Socket::Done){
+            std::cout<<"Error aceptando conexiones.."<<std::endl;
+        }else{
+            clientes.push_back(socket);
+            socketSelector.add(*socket);
+            listener.setBlocking(false);
+        }
+    }
+}
+
+void Server::loopServer(){
+    //while(true){
+        if(socketSelector.wait(sf::seconds(2))){ //Si algun socket va a recibir algo(esperar 2 segundos)
+            for(int i = 0; i < clientes.size(); i++){
+                if(socketSelector.isReady(*clientes.at(i))){
+                    recibirData(clientes.at(i),&clientes); //Imprime la data que recibe el servidor
+                }
+            }
+        }
+        else
+        {
+            //std::cout<<"No se recibio nada..."<<std::endl;
+            aceptarConexiones(); //Acepta nuevas conexiones
+        }
+    //}
+};
 
 void mandarData(sf::TcpSocket * socket,std::string * mensaje){
     const char * data = "";
@@ -112,10 +201,9 @@ int main(int argc, char *argv[]){
     std::vector<sf::IpAddress> direcciones;
     std::vector<sf::TcpSocket> socketClientes;
     int conecciones = 0;
-
-    struct Server * server = (struct Server*)malloc(sizeof(struct Server)); //Generamos la instancia de 'server'
-    initServer(server); //La inicializamos
-
+    
+    Server * server = new Server();
+    
     sf::Socket::Status status = socket.connect(ipA, PUERTO_SERVER); //Primero conectamos con el server de lookback
     if (status != sf::Socket::Done)
     {
@@ -130,7 +218,7 @@ int main(int argc, char *argv[]){
             }else{
                 mensajear(&socket,&name);  //Escribimos nuestro mensaje
                 conectaraClientes(&socketClientes,&direcciones,&conecciones); //Conectamos a clientes nuevos si los hay(al recbir las nuevas direcciones)
-                loopServer(server);//Hacemos un loop del server propio (es decir, recibimos los mensajes que nos han enviado otros clientes)
+                server->loopServer();//Hacemos un loop del server propio (es decir, recibimos los mensajes que nos han enviado otros clientes)
                 
             }
         }
@@ -139,83 +227,3 @@ int main(int argc, char *argv[]){
 
     return 0;
 }
-//De aca para abajo es todo codigo del (auto)server
-//LLamo auto server a cada cliente que abre una instancia de servidor, para que pueda recibir mensajes
-//de otros clientes. Cada cliente envia cadenas a otros servidores, los servidores los reciben y muestran
-//De esta forma, un cliente enrealidad es una mezcla entre "cliente y servidor"
-
-
-void retransmitir(std::vector<sf::TcpSocket *> * socket,char * data,std::size_t bytes){
-    for(int i = 0; i < socket->size(); i++){
-        if (socket->at(i)->send(data,bytes) != sf::Socket::Done)
-        {
-        std::cout<<"Error enviando data.."<<std::endl;
-        }
-    }
-};
-
-void recibirData(sf::TcpSocket * socket, std::vector<sf::TcpSocket*> * sockets){
-    char data[DATA_SIZE] = {0};
-    std::size_t bytesRecibidos;
-
-    if (socket->receive(data, DATA_SIZE, bytesRecibidos) != sf::Socket::Done)
-    {
-       std::cout<<"Error recibiendo data.."<<std::endl;
-    }
-    std::cout<<data<<std::endl;//" - "<<"recibido en "<<bytesRecibidos<<" bytes."<<std::endl;
-    //retransmitir(sockets,data,bytesRecibidos);
-};
-
-void aceptarConexiones(sf::TcpListener * listener,sf::SocketSelector * listenerSelector, std::vector<sf::TcpSocket*> * clientes,sf::SocketSelector * socketSelector){
-    sf::TcpSocket * socket = new sf::TcpSocket();
-    socket->setBlocking(false);
-    if (listener->accept(*socket) != sf::Socket::Done){
-            //std::cout<<"Error aceptando conexiones.."<<std::endl;
-    }else{
-            clientes->push_back(socket);
-            socketSelector->add(*socket);
-    }
-
-
-};
-void aceptarConexionPrimera(sf::TcpListener * listener, std::vector<sf::TcpSocket*> * clientes,sf::SocketSelector * socketSelector){
-    sf::TcpSocket * socket = new sf::TcpSocket();
-
-    if (listener->listen(PUERTO_CHAT) != sf::Socket::Done){
-        std::cout<<"Error escuchando conexiones.."<<std::endl;
-    }else{
-        //Aceptando clientes
-        if (listener->accept(*socket) != sf::Socket::Done){
-            std::cout<<"Error aceptando conexiones.."<<std::endl;
-        }else{
-            clientes->push_back(socket);
-            socketSelector->add(*socket);
-            listener->setBlocking(false);
-        }
-    }
-}
-
-
-void initServer(struct Server * server){
-    
-    server->listenerSelector.add(server->listener);
-
-    aceptarConexionPrimera(&server->listener,&server->clientes,&server->socketSelector);    
-}
-
-void loopServer(struct Server * server){
-    //while(true){
-        if(server->socketSelector.wait(sf::seconds(2))){ //Si algun socket va a recibir algo(esperar 2 segundos)
-            for(int i = 0; i < server->clientes.size(); i++){
-                if(server->socketSelector.isReady(*server->clientes.at(i))){
-                    recibirData(server->clientes.at(i),&server->clientes); //Imprime la data que recibe el servidor
-                }
-            }
-        }
-        else
-        {
-            //std::cout<<"No se recibio nada..."<<std::endl;
-            aceptarConexiones(&server->listener,&server->listenerSelector,&server->clientes,&server->socketSelector); //Acepta nuevas conexiones
-        }
-    //}
-};

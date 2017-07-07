@@ -6,6 +6,12 @@
 #define DATA_SIZE 100
 #define PUERTO 53000
 
+
+
+/* Por Jaime Gonzalez Bonorino
+Legajo: 90892*/
+
+
 void mandarData(sf::TcpSocket * socket,std::string * mensaje){
     const char * data = "";
     data = mensaje->c_str();
